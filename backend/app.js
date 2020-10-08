@@ -8,6 +8,7 @@ const mongoose = require('mongoose');
 const logger = require('morgan');
 const path = require('path');
 const cors = require('cors');
+const colors = require('colors');
 const session = require('express-session');
 const MongoStore = require('connect-mongo')(session);
 const flash = require('connect-flash');
@@ -19,9 +20,12 @@ mongoose
     useCreateIndex: true,
   })
   .then((x) =>
-    console.log(`Connected to Mongo! Database name: "${x.connections[0].name}"`)
+    console.log(
+      `Connected to Mongo! Database name: "${x.connections[0].name}"`.cyan
+        .underline.bold
+    )
   )
-  .catch((err) => console.error('Error connecting to mongo', err));
+  .catch((err) => console.error('Error connecting to mongo', err.red));
 
 const app_name = require('./package.json').name;
 const debug = require('debug')(
@@ -83,8 +87,8 @@ app.use('/', index);
 const todo = require('./routes/todo-routes');
 app.use('/api', todo);
 
-const auth = require("./routes/auth")
-app.use("/auth",auth)
+const auth = require('./routes/auth');
+app.use('/auth', auth);
 
 // Uncomment this line for production
 // app.get('/*', (req, res) => res.sendFile(__dirname + '/public/index.html'));

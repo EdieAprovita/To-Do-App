@@ -25,7 +25,8 @@ router.get('/signup', (req, res, next) => {
 });
 
 router.post('/signup', (req, res, next) => {
-  const { email, password } = req.body;
+  const email = req.body.email;
+  const password = req.body.password;
   if (email === '' || password === '') {
     res.render('auth/signup', {
       message: 'Please type your email and password',
@@ -33,8 +34,8 @@ router.post('/signup', (req, res, next) => {
     return;
   }
 
-  User.findOne({ email }, 'email', (error, email) => {
-    if (email !== null) {
+  User.findOne({ email }, 'email', (error, user) => {
+    if (user !== null) {
       res.render('auth/signup', { message: 'The email is already register' });
       return;
     }
@@ -53,7 +54,7 @@ router.post('/signup', (req, res, next) => {
         res.redirect('/');
       })
       .catch((error) => {
-        res.render('auth/signup', { message: 'Something went wrong' });
+        res.render('auth/signup', { message: `${error}` });
       });
   });
 });
