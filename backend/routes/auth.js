@@ -1,67 +1,98 @@
 const express = require('express');
+const authRoutes = express.Router();
+
 const passport = require('passport');
-const router = express.Router();
+const bcrypt = require('bcryptjs');
+
 const User = require('../models/User');
 
-const bcrypt = require('bcrypt');
-const bcryptSalt = 10;
+authRoutes.post('/signup', (req, res, next) => {
+  const { email, password } = req.body;
 
-router.get('/login', (req, res, next) => {
-  res.render('auth/login', { message: req.flash('error') });
-});
+  if (!email || !password) {
+    res.status(400).json({ message: 'Provide email and password' });
+    return;
+  }
 
-router.post(
-  '/login',
-  passport.authenticate('local', {
-    successRedirect: '/',
-    failureRedirect: '/auth/login',
-    failureFlash: true,
-    passReqToCallback: true,
-  })
-);
-
-router.get('/signup', (req, res, next) => {
-  res.render('auth/signup');
-});
-
-router.post('/signup', (req, res, next) => {
-  const email = req.body.email;
-  const password = req.body.password;
-  if (email === '' || password === '') {
-    res.render('auth/signup', {
-      message: 'Please type your email and password',
+  if (password.length < 7) {
+    res.status(400).json({
+      message:
+        'Please make your password at least 8 characters long for security purposes.',
     });
     return;
   }
 
-  User.findOne({ email }, 'email', (error, user) => {
-    if (user !== null) {
-      res.render('auth/signup', { message: 'The email is already register' });
+  User.findOne({ email }, (err, foundUser) => {
+    if (err) {
+      res.status(500).json({ message: `${err}` });
       return;
     }
 
-    const salt = bcrypt.genSaltSync(bcryptSalt);
+    if (foundUser) {
+      res.status(400).json({ message: 'Email taken. Choose another one.' });
+      return;
+    }
+
+    const salt = bcrypt.genSaltSync(10);
     const hashPass = bcrypt.hashSync(password, salt);
 
-    const newUser = new User({
-      email,
+    const aNewUser = new User({
+      email: email,
       password: hashPass,
     });
 
-    newUser
-      .save()
-      .then(() => {
-        res.redirect('/');
-      })
-      .catch((error) => {
-        res.render('auth/signup', { message: `${error}` });
+    aNewUser.save((err) => {
+      if (err) {
+        res.status(500).json({ message: `${err}` });
+        return;
+      }
+
+      req.login(aNewUser, (err) => {
+        if (err) {
+          res.status(500).json({ message: `${err}` });
+          return;
+        }
+
+        res.status(200).json(aNewUser);
       });
+    });
   });
 });
 
-router.get('/logout', (req, res) => {
-  req.logout();
-  res.redirect('/');
+authRoutes.post('/login', (req, res, next) => {
+  passport.authenticate('local', (err, theUser, failureDetails) => {
+    if (err) {
+      res.status(500).json({ message: `${err}` });
+      return;
+    }
+
+    if (!theUser) {
+      res.status(401).json(failureDetails);
+      return;
+    }
+
+    req.login(theUser, (err) => {
+      if (err) {
+        res.status(500).json({ message: `${err}` });
+        return;
+      }
+
+      res.status(200).json(theUser);
+    });
+  })(req, res, next);
 });
 
-module.exports = router;
+authRoutes.post('/logout', (req, res, next) => {
+  req.logout();
+  res.status(200).json({ message: 'Log out success!' });
+});
+
+authRoutes.get('/loggedin', (req, res, next) => {
+  if (req.isAuthenticated()) {
+    res.status(200).json(req.user);
+    return;
+  }
+  res.status(403).json({ message: 'Unauthorized' });
+});
+
+module.exports = authRoutes;

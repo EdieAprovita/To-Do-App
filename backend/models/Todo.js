@@ -9,16 +9,6 @@ const todoSchema = new Schema(
       unique: [true, 'This task is already register'],
     },
 
-    content: {
-      type: String,
-      required: [true, 'Write the content of the task'],
-    },
-
-    author: {
-      type: String,
-      required: [true, 'Add and author'],
-    },
-
     date: {
       type: Date,
     },
